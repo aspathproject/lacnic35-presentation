@@ -1,120 +1,237 @@
-<!--
-theme: gaia
+---
+marp: true
+theme: default
+html: true
 class:
- - invert
-headingDivider: 2 
-paginate: true
--->
+footer: ASPATH - Software código abierto para monitoreo de colectores de rutas https://aspath.app
+---
+<style>
+.blue {
+  color: blue;
+}
+.red {
+  color: red;
+}
+</style>
 
-<!--
-_class:
- - lead
- - invert
--->
+# ASPATH Project
 
-# Marp Action for GitHub
+Software open-source para monitoreo de colectores de rutas BGP.
 
-Presentations to Webpages: Instantly!
+##### Presenta:
+###### Rodrigo Peña <br>Software Engineer
+![bg right 50%](img/vertical_logo.svg)
 
-## What?
+---
 
-[Marp](https://marp.app/) lets you create slides from markdown (like this!).
+# Problemas comunes
+- "Cierta página no carga/funciona 🤔" 
+- "A que proveedor corresponde una dirección IP?"
 
-[Marp Action](https://github.com/ralexander-phi/marp-action) lets you automatically deploy your presentation to [GitHub Pages](https://pages.github.com/).
+- Búsqueda de causa
+  - DNS ok? `dig lacnic.net`
+  - Ping destino? `ping -f -c 100 lacnic.net`
+  - **Problemas de ruteo**? bgp.he.net / BGPlay / `show ip bgp` / `traceroute` / ...
 
-This presentation is both a [website](https://alexsci.com/test-marp-action) and a [README.md](https://github.com/ralexander-phi/test-marp-action/blob/dev/README.md).
+---
 
-## Why?
+# Mikrotik way
 
-Treat your presentation the same way you treat code.
+![bg right 100%](img/mikrotikbgp.gif)
+La tentación existe, pero estás poniendo mucho en juego por querer visualizar la tabla de rutas
 
-Use git to track changes. Pull requests to collaborate. Deploy to a webpage automatically.
+---
 
-See a bug? Open an issue or pull request!
+# Al momento de diagnosticar el problema ya desapareció
 
-## Setup
+-<span class="blue">**Azul**</span>: Ya se arregló, sigo con mi vida
+-<span class="red">**Roja**</span>: Quiero saber la verdad
+![bg right 100%](img/matrixpill.gif)
 
-Want to create your own?
+---
 
-First, create a new repo [from the template repo](https://github.com/ralexander-phi/test-marp-action).
+# Por qué es tan valioso investigar
 
-![](img/use-template.png)
+- Posible Hijack BGP
+- Definir responsabilidades
+- **Robustecer estabilidad de la red**
 
-## Configure GitHub Pages
+---
 
-[Setup publishing](https://help.github.com/en/github/working-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site#choosing-a-publishing-source).
+![bg right 100%](img/morpheus.jpg)
+- Posibilidad de explorar la tabla de ruteo a lo largo del tiempo
+- Desde la comodidad del navegador web
+- Implementable con cualquier router o servidor de rutas
 
-Remember the branch and URL shown.
+---
 
-## Update Workflow
+![bg right 50%](img/vertical_logo.svg)
+- Explorador de snapshots de tabla de ruteo con tecnologías web.
+- Permite **almacenar y visualizar** tablas de ruteo de múltiples equipos a lo largo del tiempo.
+- Desplegable de manera privada
+- Código abierto bajo licencia MIT
 
-You'll update the workflow file over the next few slides. You can do this right in the GitHub web page (click on the pencil icon).
+---
 
-`.github/workflows/main.yml`
+<div style="display: block;"><h1 style="margin: 0 auto;">Cómo funciona</h1></div>
+<div style="display: flex;">
+<div style="width: 70%; display: inline-block;">
+<img src="img/collector_view.gif" style="width: 100%" />
+</div>
+<div style="display: inline-block;width: 30%;">
+<ul>
+  <li>
+     Vista de snapshot proveniente de route collector de PCH.
+  </li>
+  <li>
+     Filtros dinámicos para buscar dentro de tabla de ruteo.
+  </li>
+  <li>
+     Lista de prefijos incluyendo otros datos como nombre de sistema autónomo.
+  </li>
+</ul>
+</div>
+</div>
 
-## `BASE_URL`
+---
 
-Set this to the domain you're using for GitHub Page (from earlier).
+<div style="display: block;"><h1 style="margin: 0 auto;">Caso práctico: buscando anuncios extraños en intercambio de tráfico</h1></div>
+<div style="display: flex;">
+<div style="width: 70%; display: inline-block;">
+<img src="img/prefix_search.gif" style="width: 100%" />
+</div>
+<div style="display: inline-block;width: 30%;">
+<ul>
+  <li>
+     Búsqueda rápida sobre bloques con incidentes típicos.
+  </li>
+  <li>
+     Se logra encontrar hijack presente por largo tiempo.
+  </li>
+</ul>
+</div>
+</div>
 
-If you add a custom domain later, you'll need to update this.
+---
 
-## `PUBLISH_TO_BRANCH`
+<div style="display: block;">
+  <h1 style="margin: 0 auto;">Caso práctico: encontrando BGP Leaks en servidor de ruta</h1>
+</div>
+<div style="display: flex;">
+<div style="width: 70%; display: inline-block;">
+<img src="img/bgp_leak.gif" style="width: 100%" />
+</div>
+<div style="display: inline-block;width: 30%;">
+<ol>
+  <li>
+     Búsqueda de rutas provenientes de microsoft.
+  </li>
+  <li>
+     Tras explorar tabla, se encuentran rutas con AS_PATH sospechosos.
+  </li>
+  <li>
+     Se detecta BGP leak proveniente de inyección de rutas de tránsito hacia IXP.
+  </li>
+</ol>
+</div>
+</div>
 
-Tell the build which branch you are using for GitHub Pages (you picked this earlier).
+---
 
-This is likely either `main` or `gh-pages`. Set `PUBLISH_TO_BRANCH` to the correct branch.
+# Cómo se implementa software ASPATH
 
-## Update Workflow
+- Actualmente, se consideran 2 métodos para agregar datos de ruteo al software:
+  - **Quagga dump grabber**: Útil para trabajar con routing snapshots de proveído por terceros. **PCH provee routing snapshots diarios de sus colectores de rutas en este formato**.
+  - **Colector GoBGP**: Implementación moderna de BGP. Se puede desplegar en una máquina virtual y hacer sesión multihop contra router de borde. <b>Implementación compatible con cualquier router que implemente BGP</b>.
 
-Commit `.github/workflows/main.yml` back to `dev` branch.
+---
 
-This will kick off a build.
+<div style="display: block;">
+  <h1 style="margin: 0 auto;">Diagrama de funcionamiento</h1>
+</div>
+<div style="display: flex;">
+<div style="width: 70%; display: inline-block;">
+<img src="img/aspath_diagram.png" style="width: 100%" />
+</div>
+<div style="display: inline-block;width: 30%;">
+<ul>
+  <li>
+     Proceso para alimentar al software con los Routing Snapshots disponibles desde Packet Clearing House.
+  </li>
+  <li>
+     Este despliegue no requiere interacción con ningún router.
+  </li>
+</ul>
+</div>
+</div>
 
-## Check if the build succeeded
+---
 
-Click on Actions tab and see if the build succeeded.
+<div style="display: block;">
+  <h1 style="margin: 0 auto;">Diagrama de funcionamiento para ISP</h1>
+  <h2>Backbone de ejemplo</h2>
+</div>
+<div style="display: flex;">
+<div style="width: 30%; display: inline-block;">
+<img src="img/isp_deployment.png" style="width: 100%" />
+</div>
+<div style="display: inline-block;width: 70%;">
+<ul>
+  <li>
+   Se instala <a href="https://osrg.github.io/gobgp/">goBGP</a> como colector de rutas.
+  </li>
+  <li>
+   goBGP mantendrá sesiones multihop contra routers de borde
+  </li>
+  <li>
+     ASPATH extraerá periódicamente la tabla de ruteo de goBGP para alimentar la base de datos.
+  </li>
+</ul>
+</div>
+</div>
 
-![](img/click-actions.png)
+---
 
-## Load your new web page
+# Roadmap
+## Q2 2021
+<ul>
+  <li><b>Lanzamiento versión Beta</b></li>
+  <li>Explorador de rutas  <small style="font-size: 11pt;"><strong>en progreso</strong></small></li>
+  <li>Ver snapshots pasados  <small style="font-size: 11pt;"><strong>en progreso</strong></small></li>
+  <li>Grabber Quagga y goBGP</li>
+</ul>
 
-Any update to your site will take a few minutes to be visible. Be patient.
+## Q3 2021
+<ul>
+  <li>Lanzamiento versión estable</li>
+  <li>Capacidad de compartir snapshots entre organizaciones</li>
+</ul>
 
-## Create your slides
+---
 
-Finally, start adding your own content.
+# Te necesitamos
+- Operadores de red que deseen implementar software
+- Desarrolladores que quieran ser parte del proyecto
+  - Python, Javascript, Ruby
 
-You can [install and run marp-cli](https://github.com/marp-team/marp-cli/blob/master/README.md) locally to test out the content before publishing.
+- Interesados: https://aspath.app
+- Otros: Suscribirse al newsletter para recibir noticias del proyecto
 
-## Learn more about Marp
+---
 
-This is a good time to learn more about Marp. Here's some resources:
+# Proyecto bajo licencia MIT ¿🤔?
+- Código abierto y disponible en https://aspath.app.
+- Sin fees ni royalties.
+- Se permite:
+  - Uso comercial del software
+  - Libre distribución y modificación de este.
+  - Uso privado
+---
 
-- [CommonMark](https://commonmark.org/)
-- [Cheat Sheet](https://commonmark.org/help/)
-- [Themes](https://github.com/marp-team/marp-core/tree/master/themes)
-- [CSS Themes](https://marpit.marp.app/theme-css)
-- [Directives](https://marpit.marp.app/directives)
-- [VS Code plugin](https://marketplace.visualstudio.com/items?itemName=marp-team.marp-vscode)
+# ¿Preguntas? 🤔
 
-## Example Sites
+Software open-source para monitoreo de colectores de rutas BGP.
 
-Known sites using this action are:
-
-- [University of Illinois at Urbana-Champaign's CS 199 Even More Practice](https://cs199emp.netlify.app/) [(code)](https://github.com/harsh183/emp-125)
-
-Send a [pull request](https://github.com/ralexander-phi/test-marp-action) to get your site added.
-
-## Publish your slides
-
-When you are ready to share your presentation, commit or merge to `dev` and your content on GitHub Pages will automatically update.
-
-# 🎉
-<!--
-_class:
- - lead
- - invert
--->
-### Hooray!
-
-
+##### Presenta:
+###### Rodrigo Peña <br>Software Engineer
+![bg right 50%](img/vertical_logo.svg)

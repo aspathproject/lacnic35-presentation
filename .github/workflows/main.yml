@@ -26,14 +26,14 @@ jobs:
         # For a multi-page site, try `MARP_ARGS: "-I slides/ --output dist/"`
         # Check examples for more: https://github.com/ralexander-phi/test-marp-action/blob/dev/README.md#example-sites
         # But to keep things simple, let's just convert a single README.md into index.html
-        MARP_ARGS: "README.md -o index.html"
+        MARP_ARGS: "--html README.md -o index.html"
 
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         PUBLISH_TO_BRANCH: master
         
         # You'll want to set this to your domain
-        BASE_URL: https://alexsci.com/test-marp-action/
+        BASE_URL: https://aspath.app/lacnic35-presentation/
 
       # consider using a tagged release here
       # https://docs.github.com/en/actions/reference/workflow-syntax-for-github-actions#jobsjob_idstepsuses
